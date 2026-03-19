@@ -1,0 +1,46 @@
+import serial
+import time
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# Gmail credentials
+sender_email = "YOUR-MAIL"
+app_password = "YOUR-PWD"
+receiver_email = "niharika.kulk@gmail.com"
+
+# Set your COM port here (Check it in Arduino IDE > Tools > Port)
+ser = serial.Serial('COM17', 9600, timeout=1)
+time.sleep(2)  # wait for Arduino to reset
+
+def send_email_alert(subject, body):
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
+
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(sender_email, app_password)
+        server.sendmail(sender_email, receiver_email, msg.as_string())
+        server.quit()
+        print("✅ Email sent:", subject)
+    except Exception as e:
+        print("❌ Error sending email:", e)
+
+print("📡 Listening to Arduino...")
+while True:
+    try:
+        line = ser.readline().decode('utf-8').strip().lower()
+        if line:
+            print("🔹 Message from Arduino:", line)
+            if "fire detected" in line:
+                send_email_alert("🔥 Fire Alert!", "ALERT: Fire detected at your location!")
+            elif "smoke detected" in line:
+                send_email_alert("💨 Smoke Alert!", "ALERT: Smoke detected at your location!")
+    except KeyboardInterrupt:
+        print("🛑 Stopped by user")
+        break
+    except Exception as err:
+        print("⚠️ Error:", err)
